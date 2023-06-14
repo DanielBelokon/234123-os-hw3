@@ -1,5 +1,6 @@
 #include "segel.h"
 #include "request.h"
+#include "queue.h"
 
 // 
 // server.c: A very, very simple web server
@@ -11,41 +12,75 @@
 // Most of the work is done within routines written in request.c
 //
 
-// HW3: Parse the new arguments too
-void getargs(int *port, int argc, char *argv[])
+typedef struct server_args_t
 {
-    if (argc < 2) {
-	fprintf(stderr, "Usage: %s <port>\n", argv[0]);
-	exit(1);
+    int port;
+    int threads;
+    int queue_size;
+    int schedalg;
+    int max_size;
+} server_args;
+
+Queue queue;
+
+// HW3: Parse the new arguments too
+void getargs(server_args *sa, int argc, char *argv[])
+{
+    if (argc < 4)
+    {
+        fprintf(stderr, "Usage: %s <port>\n", argv[0]);
+        exit(1);
     }
-    *port = atoi(argv[1]);
+    sa->port = atoi(argv[1]);
+    sa->threads = atoi(argv[2]);
+    sa->queue_size = atoi(argv[3]);
+    // sa->schedalg = atoi(argv[4]);
+    // sa->max_size = atoi(argv[5]);
 }
 
+void thread()
+{
+    pthread_detach(pthread_self());
+    while (1)
+    {
+        int connfd = queueRemove(queue);
+        requestHandle(connfd);
+        Close(connfd);
+    }
+}
 
 int main(int argc, char *argv[])
 {
-    int listenfd, connfd, port, clientlen;
+    int listenfd, connfd, clientlen;
+    server_args sa;
+
     struct sockaddr_in clientaddr;
+    pthread_t tid;
 
-    getargs(&port, argc, argv);
+    // setup fd queue
+    queue = queueCreate();
 
-    // 
-    // HW3: Create some threads...
+    getargs(&sa, argc, argv);
+
+    for (size_t i = 0; i < sa.threads; i++)
+    {
+        pthread_create(&tid, NULL, thread, NULL);
+        pthread_detach(tid);
+    }
+
     //
+    // HW3: Create some threads...
 
-    listenfd = Open_listenfd(port);
+    listenfd = Open_listenfd(sa.port);
     while (1) {
-	clientlen = sizeof(clientaddr);
-	connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
+        clientlen = sizeof(clientaddr);
+        connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *)&clientlen);
 
-	// 
-	// HW3: In general, don't handle the request in the main thread.
-	// Save the relevant info in a buffer and have one of the worker threads 
-	// do the work. 
-	// 
-	requestHandle(connfd);
-
-	Close(connfd);
+        // Add the connected descriptor to the queue
+        // - use pthread_mutex_lock() and pthread_mutex_unlock() around
+        //   this code, so that only one thread can access the queue at a
+        //   time.
+        queueInsert(queue, connfd);
     }
 
 }
