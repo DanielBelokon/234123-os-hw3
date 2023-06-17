@@ -30,14 +30,15 @@ Queue queueCreate(int q_capacity)
 
 void queueDestroy(Queue queue)
 {
+    time_t temp;
     while (queue->size > 0)
     {
-        queueRemove(queue);
+        queueRemove(queue, &temp);
     }
     free(queue);
 }
 
-void queueInsert(Queue queue, int connfd)
+void queueInsert(Queue queue, int connfd, time_t arrival_time)
 {
     pthread_mutex_lock(&queue->mutex);
     while (queue->size == queue->capacity)
@@ -47,6 +48,7 @@ void queueInsert(Queue queue, int connfd)
 
     Node node = malloc(sizeof(struct node));
     node->connfd = connfd;
+    node->arrival_time = arrival_time;
     node->next = NULL;
     if (queue->size == 0)
     {
@@ -63,7 +65,7 @@ void queueInsert(Queue queue, int connfd)
     pthread_mutex_unlock(&queue->mutex);
 }
 
-int queueRemove(Queue queue)
+int queueRemove(Queue queue, time_t *arrival_time)
 {
     pthread_mutex_lock(&queue->mutex);
     while (queueIsEmpty(queue))
@@ -78,6 +80,7 @@ int queueRemove(Queue queue)
     Node node = queue->head;
     queue->head = node->next;
     int connfd = node->connfd;
+    *arrival_time = node->arrival_time;
     free(node);
     queue->size--;
 

@@ -3,13 +3,13 @@
 
 #include "queue.h"
 
-void sched_block(int connfd, Queue queue, int max_size)
+void sched_block(int connfd, time_t arrival_time, Queue queue, int max_size)
 {
     // Queue already has cond and mutex to handle this
-    queueInsert(queue, connfd);
+    queueInsert(queue, connfd, arrival_time);
 }
 
-void sched_dt(int connfd, Queue queue, int max_size)
+void sched_dt(int connfd, time_t arrival_time, Queue queue, int max_size)
 {
     if (queueGetSize(queue) >= max_size)
     {
@@ -18,31 +18,32 @@ void sched_dt(int connfd, Queue queue, int max_size)
     }
     else
     {
-        queueInsert(queue, connfd);
+        queueInsert(queue, connfd, arrival_time);
     }
 }
 
-void sched_dh(int connfd, Queue queue, int max_size)
+void sched_dh(int connfd, time_t arrival_time, Queue queue, int max_size)
 {
     if (queueGetSize(queue) >= max_size)
     {
-        queueRemove(queue);
+        time_t temp;
+        queueRemove(queue, &temp);
     }
 
-    queueInsert(queue, connfd);
+    queueInsert(queue, connfd, arrival_time);
 }
 
-void sched_bf(int connfd, Queue queue, int max_size)
+void sched_bf(int connfd, time_t arrival_time, Queue queue, int max_size)
 {
     if (queueGetSize(queue) >= max_size)
     {
         queueWaitEmpty(queue);
     }
 
-    queueInsert(queue, connfd);
+    queueInsert(queue, connfd, arrival_time);
 }
 
-void sched_dynamic(int connfd, Queue queue, int max_size)
+void sched_dynamic(int connfd, time_t arrival_time, Queue queue, int max_size)
 {
     if (queueGetSize(queue) >= queueGetCapacity(queue))
     {
@@ -52,11 +53,11 @@ void sched_dynamic(int connfd, Queue queue, int max_size)
     }
     else
     {
-        queueInsert(queue, connfd);
+        queueInsert(queue, connfd, arrival_time);
     }
 }
 
-void sched_random(int connfd, Queue queue, int max_size)
+void sched_random(int connfd, time_t arrival_time, Queue queue, int max_size)
 {
 }
 
