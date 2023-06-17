@@ -75,11 +75,6 @@ int main(int argc, char *argv[])
     while (1) {
         clientlen = sizeof(clientaddr);
         connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *)&clientlen);
-
-        // Add the connected descriptor to the queue
-        // - use pthread_mutex_lock() and pthread_mutex_unlock() around
-        //   this code, so that only one thread can access the queue at a
-        //   time.
         queueInsert(queue, connfd);
     }
 

@@ -1,23 +1,20 @@
 #include "queue.h"
 
-pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
-
 Queue queueCreate()
 {
-    if (pthread_mutex_init(&queue_mutex, NULL) != 0)
+    Queue queue = malloc(sizeof(struct queue));
+    if (pthread_mutex_init(&queue->mutex, NULL) != 0)
     {
         printf("mutex init failed\n");
         return 1;
     }
 
-    if (pthread_cond_init(&queue_cond, NULL) != 0)
+    if (pthread_cond_init(&queue->cond, NULL) != 0)
     {
         printf("cond init failed\n");
         return 1;
     }
 
-    Queue queue = malloc(sizeof(struct queue));
     queue->size = 0;
     queue->head = NULL;
     queue->tail = NULL;
@@ -35,7 +32,7 @@ void queueDestroy(Queue queue)
 
 void queueInsert(Queue queue, int connfd)
 {
-    pthread_mutex_lock(&queue_mutex);
+    pthread_mutex_lock(&queue->mutex);
     Node node = malloc(sizeof(struct node));
     node->connfd = connfd;
     node->next = NULL;
@@ -50,16 +47,16 @@ void queueInsert(Queue queue, int connfd)
         queue->tail = node;
     }
     queue->size++;
-    pthread_cond_signal(&queue_cond);
-    pthread_mutex_unlock(&queue_mutex);
+    pthread_cond_signal(&queue->cond);
+    pthread_mutex_unlock(&queue->mutex);
 }
 
 int queueRemove(Queue queue)
 {
-    pthread_mutex_lock(&queue_mutex);
+    pthread_mutex_lock(&queue->mutex);
     while (queueIsEmpty(queue))
     {
-        pthread_cond_wait(&queue_cond, &queue_mutex);
+        pthread_cond_wait(&queue->cond, &queue->mutex);
     }
 
     if (queue->size == 0)
@@ -71,7 +68,7 @@ int queueRemove(Queue queue)
     int connfd = node->connfd;
     free(node);
     queue->size--;
-    pthread_mutex_unlock(&queue_mutex);
+    pthread_mutex_unlock(&queue->mutex);
     return connfd;
 }
 

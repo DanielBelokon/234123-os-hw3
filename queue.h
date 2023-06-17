@@ -16,6 +16,9 @@ typedef struct queue
     int size;
     Node head;
     Node tail;
+
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
 } *Queue;
 
 Queue queueCreate();
