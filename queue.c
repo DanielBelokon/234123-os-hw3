@@ -1,6 +1,6 @@
 #include "queue.h"
 
-Queue queueCreate()
+Queue queueCreate(int q_capacity)
 {
     Queue queue = malloc(sizeof(struct queue));
     if (pthread_mutex_init(&queue->mutex, NULL) != 0)
@@ -9,13 +9,20 @@ Queue queueCreate()
         return 1;
     }
 
-    if (pthread_cond_init(&queue->cond, NULL) != 0)
+    if (pthread_cond_init(&queue->cond_not_empty, NULL) != 0)
+    {
+        printf("cond init failed\n");
+        return 1;
+    }
+
+    if (pthread_cond_init(&queue->cond_not_full, NULL) != 0)
     {
         printf("cond init failed\n");
         return 1;
     }
 
     queue->size = 0;
+    queue->capacity = q_capacity;
     queue->head = NULL;
     queue->tail = NULL;
     return queue;
@@ -33,6 +40,11 @@ void queueDestroy(Queue queue)
 void queueInsert(Queue queue, int connfd)
 {
     pthread_mutex_lock(&queue->mutex);
+    while (queue->size == queue->capacity)
+    {
+        pthread_cond_wait(&queue->cond_not_full, &queue->mutex);
+    }
+
     Node node = malloc(sizeof(struct node));
     node->connfd = connfd;
     node->next = NULL;
@@ -47,7 +59,7 @@ void queueInsert(Queue queue, int connfd)
         queue->tail = node;
     }
     queue->size++;
-    pthread_cond_signal(&queue->cond);
+    pthread_cond_signal(&queue->cond_not_empty);
     pthread_mutex_unlock(&queue->mutex);
 }
 
@@ -56,7 +68,7 @@ int queueRemove(Queue queue)
     pthread_mutex_lock(&queue->mutex);
     while (queueIsEmpty(queue))
     {
-        pthread_cond_wait(&queue->cond, &queue->mutex);
+        pthread_cond_wait(&queue->cond_not_empty, &queue->mutex);
     }
 
     if (queue->size == 0)
@@ -68,8 +80,45 @@ int queueRemove(Queue queue)
     int connfd = node->connfd;
     free(node);
     queue->size--;
+
+    pthread_cond_signal(&queue->cond_not_full);
+
+    if (queue->size == 0)
+    {
+        pthread_cond_signal(&queue->cond_empty);
+    }
+
     pthread_mutex_unlock(&queue->mutex);
     return connfd;
+}
+int queueGetSize(Queue queue)
+{
+    pthread_mutex_lock(&queue->mutex);
+    int curSize = queue->size;
+    pthread_mutex_unlock(&queue->mutex);
+    return curSize;
+}
+
+int queueGetCapacity(Queue queue)
+{
+    pthread_mutex_lock(&queue->mutex);
+    int curCapacity = queue->capacity;
+    pthread_mutex_unlock(&queue->mutex);
+    return curCapacity;
+}
+
+void queueSetCapacity(Queue queue, int newCapacity)
+{
+    pthread_mutex_lock(&queue->mutex);
+    queue->capacity = newCapacity;
+    pthread_mutex_unlock(&queue->mutex);
+}
+
+void queueIncrementCapacity(Queue queue)
+{
+    pthread_mutex_lock(&queue->mutex);
+    queue->capacity++;
+    pthread_mutex_unlock(&queue->mutex);
 }
 
 int queueIsEmpty(Queue queue)
@@ -80,4 +129,14 @@ int queueIsEmpty(Queue queue)
 int queueSize(Queue queue)
 {
     return queue->size;
+}
+
+void queueWaitEmpty(Queue queue)
+{
+    pthread_mutex_lock(&queue->mutex);
+    while (queue->size != 0)
+    {
+        pthread_cond_wait(&queue->cond_empty, &queue->mutex);
+    }
+    pthread_mutex_unlock(&queue->mutex);
 }

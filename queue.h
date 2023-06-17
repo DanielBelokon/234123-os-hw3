@@ -14,11 +14,15 @@ typedef struct node
 typedef struct queue
 {
     int size;
+    int capacity;
     Node head;
     Node tail;
 
     pthread_mutex_t mutex;
-    pthread_cond_t cond;
+    pthread_cond_t cond_not_empty;
+    pthread_cond_t cond_not_full;
+
+    pthread_cond_t cond_empty;
 } *Queue;
 
 Queue queueCreate();
@@ -27,5 +31,9 @@ void queueInsert(Queue queue, int connfd);
 int queueRemove(Queue queue);
 int queueIsEmpty(Queue queue);
 int queueSize(Queue queue);
+int queueGetCapacity(Queue queue);
+void queueSetCapacity(Queue queue, int capacity);
+void queueIncrementCapacity(Queue queue);
+void queueWaitEmpty(Queue queue);
 
 #endif

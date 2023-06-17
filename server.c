@@ -1,6 +1,7 @@
 #include "segel.h"
 #include "request.h"
 #include "queue.h"
+#include "schedpolicy.h"
 
 // 
 // server.c: A very, very simple web server
@@ -17,7 +18,7 @@ typedef struct server_args_t
     int port;
     int threads;
     int queue_size;
-    int schedalg;
+    void (*schedalg)(int connfd, Queue queue, int max_size);
     int max_size;
 } server_args;
 
@@ -34,9 +35,14 @@ void getargs(server_args *sa, int argc, char *argv[])
     sa->port = atoi(argv[1]);
     sa->threads = atoi(argv[2]);
     sa->queue_size = atoi(argv[3]);
-    // sa->schedalg = atoi(argv[4]);
-    // sa->max_size = atoi(argv[5]);
+    sa->schedalg = decidePolicy(argv[4]);
+
+    if (argc > 5)
+        sa->max_size = atoi(argv[5]);
+    else
+        sa->max_size = sa->queue_size;
 }
+// "block", "dt", "dh", "bf", "dynamic", or "random"
 
 void thread()
 {
@@ -58,7 +64,7 @@ int main(int argc, char *argv[])
     pthread_t tid;
 
     // setup fd queue
-    queue = queueCreate();
+    queue = queueCreate(sa.queue_size);
 
     getargs(&sa, argc, argv);
 
@@ -75,7 +81,9 @@ int main(int argc, char *argv[])
     while (1) {
         clientlen = sizeof(clientaddr);
         connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *)&clientlen);
-        queueInsert(queue, connfd);
+
+        sa.schedalg(connfd, queue, sa.max_size);
+        // queueInsert(queue, connfd);
     }
 
 }
