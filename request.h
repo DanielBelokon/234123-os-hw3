@@ -1,16 +1,18 @@
 #ifndef __REQUEST_H__
 #define __REQUEST_H__
 
+#include "segel.h"
+
 typedef struct thread_statistics_t
 {
-    int dispatchInterval;
-    int responseInterval;
+    struct timeval arrival_time;
+    struct timeval dispatch_interval;
 
-    int thread_num;
+    int handler_thread_id;
 
-    int requests;
-    int dynamic_requests;
-    int static_requests;
+    int request_count;
+    int dynamic_requests_count;
+    int static_requests_count;
 } *thread_statistics;
 
 void requestHandle(int fd, thread_statistics thread_stats);

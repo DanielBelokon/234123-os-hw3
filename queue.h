@@ -2,13 +2,11 @@
 #define Queue_h
 
 #include "segel.h"
-#include <stdlib.h>
-#include <pthread.h>
 
 typedef struct node
 {
     int connfd;
-    time_t arrival_time;
+    struct timeval arrival_time;
     struct node *next;
 } *Node;
 
@@ -28,8 +26,8 @@ typedef struct queue
 
 Queue queueCreate();
 void queueDestroy(Queue queue);
-void queueInsert(Queue queue, int connfd, time_t arrival_time);
-int queueRemove(Queue queue, time_t *arrival_time);
+void queueInsert(Queue queue, int connfd, struct timeval arrival_time);
+int queueRemove(Queue queue, struct timeval *arrival_time);
 int queueIsEmpty(Queue queue);
 int queueSize(Queue queue);
 int queueGetCapacity(Queue queue);

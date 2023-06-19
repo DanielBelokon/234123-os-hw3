@@ -38,7 +38,7 @@ void queueDestroy(Queue queue)
     free(queue);
 }
 
-void queueInsert(Queue queue, int connfd, time_t arrival_time)
+void queueInsert(Queue queue, int connfd, struct timeval arrival_time)
 {
     pthread_mutex_lock(&queue->mutex);
     while (queue->size == queue->capacity)
@@ -65,7 +65,7 @@ void queueInsert(Queue queue, int connfd, time_t arrival_time)
     pthread_mutex_unlock(&queue->mutex);
 }
 
-int queueRemove(Queue queue, time_t *arrival_time)
+int queueRemove(Queue queue, struct timeval *arrival_time)
 {
     pthread_mutex_lock(&queue->mutex);
     while (queueIsEmpty(queue))

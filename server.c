@@ -18,7 +18,7 @@ typedef struct server_args_t
     int port;
     int threads;
     int queue_size;
-    void (*schedalg)(int connfd, Queue queue, int max_size, time_t arrival_time);
+    void (*schedalg)(int connfd, struct timeval arrival_time, Queue queue, int max_size);
     int max_size;
 } server_args;
 
@@ -29,6 +29,12 @@ void getargs(server_args *sa, int argc, char *argv[])
 {
     if (argc < 4)
     {
+        sa->port = 9999;
+        sa->threads = 4;
+        sa->queue_size = 20;
+        sa->schedalg = &sched_block;
+        sa->max_size = 20;
+        return;
         fprintf(stderr, "Usage: %s <port>\n", argv[0]);
         exit(1);
     }
@@ -48,17 +54,20 @@ void thread(int thread_num)
 {
     pthread_detach(pthread_self());
     thread_statistics threadstats = malloc(sizeof(struct thread_statistics_t));
-    threadstats->thread_num = thread_num;
-    threadstats->requests = 0;
-    threadstats->static_requests = 0;
-    threadstats->dynamic_requests = 0;
+    threadstats->handler_thread_id = thread_num;
+    threadstats->request_count = 0;
+    threadstats->static_requests_count = 0;
+    threadstats->dynamic_requests_count = 0;
 
     while (1)
     {
-        time_t arrival_time;
+        struct timeval arrival_time;
         int connfd = queueRemove(queue, &arrival_time);
         // TODO change to getT
-        threadstats->dispatchInterval = time(NULL) - arrival_time;
+        gettimeofday(&threadstats->dispatch_interval, NULL);
+
+        timersub(&threadstats->dispatch_interval, &arrival_time, &threadstats->dispatch_interval);
+        threadstats->arrival_time = arrival_time;
         requestHandle(connfd, threadstats);
         Close(connfd);
     }
@@ -87,7 +96,9 @@ int main(int argc, char *argv[])
     while (1) {
         clientlen = sizeof(clientaddr);
         connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *)&clientlen);
-        sa.schedalg(connfd, queue, sa.max_size, time(NULL));
+        struct timeval arrival_time;
+        gettimeofday(&arrival_time, NULL);
+        sa.schedalg(connfd, arrival_time, queue, sa.max_size);
     }
 
 }
