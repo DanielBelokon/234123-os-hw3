@@ -1,0 +1,77 @@
+Tests Summary:
+here you can find a general description of each test. you will also find a simillar test summary at the end of your logfile.log which you can find in your feedback.
+if you got a 0, your code probabliy didn't compile due to missing files.
+if you failed the headers test, make sure you don't have an empty line before the last header.
+
+there are some tests that we didn't include in the final grade calculations due to thier low pass rate.
+
+test build: (not included in grades calculations)
+ build project using make
+
+The following 21 tests have an equal weight, each passed test contributes 5 points to your grade out of 105, a maximal grade that one can get: 
+
+test basic:
+ check if the webserver can serve requests
+
+test nobusywait:
+ test to make sure you are not busy-waiting
+
+test pool:
+ check if using a fixed size thread pool
+
+test single:
+ single thread serving many requests server params: threads 1, Q_size 30. 25 clients each requesting ['/home.html', '/favicon.ico'], 20 times
+
+test light:
+ light request load server params: threads 20, Q_size 10. 5 clients each requesting ['/home.html', '/output.cgi?0.1', '/favicon.ico', '/output.cgi?0.02'], 20 times
+
+test light2:
+ light request load server params: threads 16, Q_size 32. 4 clients each requesting ['/home.html', '/output.cgi?0.0112', '/favicon.ico'], 30 times
+
+test locks:
+ sends many concurrent requests to test locking. server params: threads 8, Q_size 16. 20 clients each requesting ['/home.html', '/output.cgi?0.3', '/favicon.ico'], 20 times
+
+test locks2:
+ sends many concurrent requests to test locking. server params: threads 32, Q_size 64. 40 clients each requesting ['/home.html', '/output.cgi?0.3', '/favicon.ico', '/output.cgi?0.2'], 10 times
+
+test locks3:
+ sends many concurrent requests to test locking. server params: threads 64, Q_size 128. 50 clients each requesting ['/home.html', '/output.cgi?0.3', '/favicon.ico', '/output.cgi?0.2'], 6 times
+
+test locks4:
+ sends many concurrent requests to test locking. server params: threads 25, Q_size 27. 20 clients each requesting ['/output.cgi?0.01', '/output.cgi?0.02', '/output.cgi?0.005'], 20 times
+
+test equal:
+ equal buffers and threads server params: threads 8, Q_size 8. 20 clients each requesting ['/home.html', '/output.cgi?0.3', '/favicon.ico'], 10 times
+
+test equal2:
+ equal buffers and threads server params: threads 32, Q_size 32. 32 clients each requesting ['/home.html', '/output.cgi?0.3', '/favicon.ico'], 20 times
+
+test equal3:
+ equal buffers and threads server params: threads 16, Q_size 16. 12 clients each requesting ['/home.html', '/output.cgi?0.3', '/favicon.ico'], 20 times
+
+test fewer:
+ fewer buffers than threads server params: threads 16, Q_size 8. 20 clients each requesting ['/home.html', '/output.cgi?0.3', '/favicon.ico'], 20 times
+
+test drop_head:
+ testing a drop head policy by counting the number of accepted requests. server params: 2 threads, Q_size: 8, policy: drop head.       
+ the client sends 14 concurrent requests. the first two should be handled immediatly, 2-8 should be in waiting but recieving requests 9-14 will cause requests 2-8 to be dropped.
+
+test drop_tail:
+ testing a drop tail policy by counting the number of accepted requests. server params: 2 threads, Q_size: 8, policy: drop tail.       
+ the client sends 12 concurrent requests. the first two should be handled immediatly, 6 should be in waiting and the 9th-12th requests will be dropped.
+
+test drop_random:
+ testing a drop random policy by counting the number of accepted requests. server params: 2 threads, Q_size: 8, policy: drop random.       
+ the client sends 9 concurrent requests. the first two should be handled immediatly, 6 should be in waiting and the 9th request will trigger the random drop, which should drop 0.25*6 =ciel(1.5)=2 requests top drop.
+
+test stats_all_count:
+ check stats_thread_count if correct sending 8 requests 4 of which are dynamic and 4 static.
+
+test stats_dynamic_count:
+ check stats_static_count if correct sending 8 requests 4 of which are dynamic.
+
+test stats_static_count:
+ check stats_static_count if correct sending 8 requests 4 of which are static.
+
+test stats_distpatch_time:
+ check stats: dispatch time should be greater than 1 secs when sending 1sec 4 dynamic requests. the server only has 2 worker threads.

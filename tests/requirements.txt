@@ -1,0 +1,5 @@
+pytest
+pytest-xdist
+requests
+requests_futures
+psutil
