@@ -35,7 +35,7 @@ void getargs(server_args *sa, int argc, char *argv[])
         sa->schedalg = &sched_block;
         sa->max_size = 20;
         return;
-        fprintf(stderr, "Usage: %s <port>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <port> <threads> <queue_size> <schedalg> [<max_size>]\n", argv[0]);
         exit(1);
     }
     sa->port = atoi(argv[1]);
@@ -63,6 +63,7 @@ void thread(int thread_num)
     {
         struct timeval arrival_time;
         int connfd = queueRemove(queue, &arrival_time);
+        increment_in_progress();
         // TODO change to getT
         gettimeofday(&threadstats->dispatch_interval, NULL);
 
@@ -70,6 +71,7 @@ void thread(int thread_num)
         threadstats->arrival_time = arrival_time;
         requestHandle(connfd, threadstats);
         Close(connfd);
+        decrement_in_progress();
     }
 }
 
@@ -82,9 +84,9 @@ int main(int argc, char *argv[])
     pthread_t tid;
 
     // setup fd queue
-    queue = queueCreate(sa.queue_size);
 
     getargs(&sa, argc, argv);
+    queue = queueCreate(sa.queue_size);
 
     for (size_t i = 0; i < sa.threads; i++)
     {

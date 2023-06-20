@@ -3,6 +3,32 @@
 
 #include "queue.h"
 
+int in_progress = 0;
+
+pthread_mutex_t in_progress_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void increment_in_progress()
+{
+    pthread_mutex_lock(&in_progress_mutex);
+    in_progress++;
+    pthread_mutex_unlock(&in_progress_mutex);
+}
+
+void decrement_in_progress()
+{
+    pthread_mutex_lock(&in_progress_mutex);
+    in_progress--;
+    pthread_mutex_unlock(&in_progress_mutex);
+}
+
+int get_in_progress()
+{
+    pthread_mutex_lock(&in_progress_mutex);
+    int ret = in_progress;
+    pthread_mutex_unlock(&in_progress_mutex);
+    return ret;
+}
+
 void sched_block(int connfd, struct timeval arrival_time, Queue queue, int max_size)
 {
     // Queue already has cond and mutex to handle this
@@ -11,7 +37,7 @@ void sched_block(int connfd, struct timeval arrival_time, Queue queue, int max_s
 
 void sched_dt(int connfd, struct timeval arrival_time, Queue queue, int max_size)
 {
-    if (queueGetSize(queue) >= max_size)
+    if (queueGetSize(queue) + get_in_progress() >= queueGetCapacity(queue))
     {
         Close(connfd);
         return;
@@ -24,10 +50,10 @@ void sched_dt(int connfd, struct timeval arrival_time, Queue queue, int max_size
 
 void sched_dh(int connfd, struct timeval arrival_time, Queue queue, int max_size)
 {
-    if (queueGetSize(queue) >= max_size)
+    if (queueGetSize(queue) + get_in_progress() >= queueGetCapacity(queue))
     {
         struct timeval temp;
-        queueRemove(queue, &temp);
+        Close(queueRemove(queue, &temp));
     }
 
     queueInsert(queue, connfd, arrival_time);
@@ -35,7 +61,7 @@ void sched_dh(int connfd, struct timeval arrival_time, Queue queue, int max_size
 
 void sched_bf(int connfd, struct timeval arrival_time, Queue queue, int max_size)
 {
-    if (queueGetSize(queue) >= max_size)
+    if (queueGetSize(queue) + get_in_progress() >= queueGetCapacity(queue))
     {
         queueWaitEmpty(queue);
     }
@@ -45,7 +71,7 @@ void sched_bf(int connfd, struct timeval arrival_time, Queue queue, int max_size
 
 void sched_dynamic(int connfd, struct timeval arrival_time, Queue queue, int max_size)
 {
-    if (queueGetSize(queue) >= queueGetCapacity(queue))
+    if (queueGetSize(queue) + get_in_progress() >= queueGetCapacity(queue))
     {
         Close(connfd);
         if (max_size > queueGetCapacity(queue))
@@ -62,12 +88,19 @@ void sched_random(int connfd, struct timeval arrival_time, Queue queue, int max_
     // remove 50% of the queue if it's full in random order
     if (queueGetSize(queue) >= max_size)
     {
-        int i;
-        for (i = 0; i < max_size / 2; i++)
+        for (int i = 0; i < max_size / 2; i++)
         {
-            struct timeval temp;
-            queueRemove(queue, &temp);
+            pthread_mutex_lock(&queue->mutex);
+            Node node = queue->head;
+            queue->head = node->next;
+            int connfd = node->connfd;
+            free(node);
+            queue->size--;
+            Close(connfd);
         }
+
+        pthread_cond_signal(&queue->cond_not_full);
+        pthread_mutex_unlock(&queue->mutex);
     }
 
     queueInsert(queue, connfd, arrival_time);
@@ -102,7 +135,7 @@ void *decidePolicy(const char *policy)
     }
     else /* default: */
     {
-        return sched_block;
+        return sched_dt;
     }
 }
 
