@@ -30,6 +30,7 @@ void queueInsert(Queue queue, int connfd, struct timeval arrival_time);
 int queueRemove(Queue queue, struct timeval *arrival_time);
 int queueIsEmpty(Queue queue);
 int queueSize(Queue queue);
+int queueGetSize(Queue queue);
 int queueGetCapacity(Queue queue);
 void queueSetCapacity(Queue queue, int capacity);
 void queueIncrementCapacity(Queue queue);
