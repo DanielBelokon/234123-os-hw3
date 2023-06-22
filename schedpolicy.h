@@ -53,7 +53,7 @@ void sched_dh(int connfd, struct timeval arrival_time, Queue queue, int max_size
     if (queueGetSize(queue) + get_in_progress() >= queueGetCapacity(queue))
     {
         struct timeval temp;
-        Close(queueRemove(queue, &temp));
+        Close(queueRemove(queue, &temp, 0));
     }
 
     queueInsert(queue, connfd, arrival_time);
@@ -86,23 +86,22 @@ void sched_dynamic(int connfd, struct timeval arrival_time, Queue queue, int max
 void sched_random(int connfd, struct timeval arrival_time, Queue queue, int max_size)
 {
     // remove 50% of the queue if it's full in random order
-    if (queueGetSize(queue) >= max_size)
+    pthread_mutex_lock(&queue->mutex);
+    if (queue->size + get_in_progress() >= queue->capacity)
     {
-        for (int i = 0; i < max_size / 2; i++)
+        int count = queue->size;
+        for (int i = 0; i < count / 2; i++)
         {
-            pthread_mutex_lock(&queue->mutex);
             Node node = queue->head;
             queue->head = node->next;
-            int connfd = node->connfd;
+            Close(node->connfd);
             free(node);
             queue->size--;
-            Close(connfd);
         }
 
         pthread_cond_signal(&queue->cond_not_full);
-        pthread_mutex_unlock(&queue->mutex);
     }
-
+    pthread_mutex_unlock(&queue->mutex);
     queueInsert(queue, connfd, arrival_time);
 }
 

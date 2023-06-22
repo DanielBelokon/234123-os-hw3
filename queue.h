@@ -27,7 +27,7 @@ typedef struct queue
 Queue queueCreate();
 void queueDestroy(Queue queue);
 void queueInsert(Queue queue, int connfd, struct timeval arrival_time);
-int queueRemove(Queue queue, struct timeval *arrival_time);
+int queueRemove(Queue queue, struct timeval *arrival_time, int wait_for_empty);
 int queueIsEmpty(Queue queue);
 int queueSize(Queue queue);
 int queueGetSize(Queue queue);

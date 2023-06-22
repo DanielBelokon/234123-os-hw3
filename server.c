@@ -62,7 +62,7 @@ void thread(int thread_num)
     while (1)
     {
         struct timeval arrival_time;
-        int connfd = queueRemove(queue, &arrival_time);
+        int connfd = queueRemove(queue, &arrival_time, 1);
         increment_in_progress();
         // TODO change to getT
         gettimeofday(&threadstats->dispatch_interval, NULL);
